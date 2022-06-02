@@ -119,20 +119,33 @@ def image_detection(image_or_path, network, class_names, class_colors, thresh):
     darknet.copy_image_from_bytes(darknet_image, image_resized.tobytes())
     # Measure detection time.
     times = []
+    skipped_times = []
     for i in range(11):
         t1 = time.time()
         detections = darknet.detect_image(network, class_names, darknet_image, thresh=thresh)
         t2 = time.time()
-        avg_time = int((t2 -t1)*1000)
+        frame_avg_time = int((t2 -t1)*1000)
         # print('Time taken by {} : '.format(image_or_path) + 'Iter ' +str(i)+ ">> " + str(avg_time) + ' ms')
         if i > 0 :
-            times.append(avg_time)
-    print(times)
+            times.append(frame_avg_time)
+        else:
+            skipped_times.append(frame_avg_time)
+    print('Accepted ', times)
+    print('Skipped time : ', skipped_times)
+
+    skip_time = int(sum(skipped_times))
+
+    # Average time taken per image.
+    image_avg_time = int(sum(times)/len(times))
+
     darknet.free_image(darknet_image)
 
     image = darknet.draw_boxes(detections, image, class_colors, height, width)
+    image_or_path = image_or_path.replace("test-images/", "")
 
-    return image, detections
+    cv2.imwrite('Outputs/yolov3-tiny/' + image_or_path, image)
+
+    return image, detections, image_avg_time, skip_time
 
 
 def batch_detection(network, images, class_names, class_colors,
@@ -225,6 +238,8 @@ def main():
     print(images)
 
     index = 0
+    time_list = []
+    skip_time_list = []
     while True:
         # loop asking for new image paths if no list is given
         if args.input:
@@ -233,23 +248,33 @@ def main():
             image_name = images[index]
         else:
             image_name = input("Enter Image Path: ")
-        prev_time = time.time()
-        image, detections = image_detection(
+        # prev_time = time.time()
+        image, detections, time, skip_time = image_detection(
             image_name, network, class_names, class_colors, args.thresh
             )
         if args.save_labels:
             save_annotations(image_name, image, detections, class_names)
         darknet.print_detections(detections, args.ext_output)
-        fps = int(1/(time.time() - prev_time))
-        print("FPS: {}".format(fps))
+        # fps = int(1/(time.time() - prev_time))
+        # print("FPS: {}".format(fps))
         if not args.dont_show:
             cv2.imshow('Inference', image)
-            if cv2.waitKey(0) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+        time_list.append(time)
+        skip_time_list.append(skip_time)
         index += 1
+
+    net_avg_time = int(sum(time_list)/len(time_list))
+    print('Total Average Time Taken : ', net_avg_time)
+    return sum(skip_time_list)
 
 
 if __name__ == "__main__":
     # unconmment next line for an example of batch processing
     # batch_detection_example()
-    main()
+    t1 = time.time()
+    skip = main()
+    t2 = time.time()
+    grand_total_time = int(((t2 - t1)*1000 - skip)/250)
+    print('Grand Total time taken : ', grand_total_time)
