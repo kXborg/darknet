@@ -117,7 +117,17 @@ def image_detection(image_or_path, network, class_names, class_colors, thresh):
                                interpolation=cv2.INTER_LINEAR)
 
     darknet.copy_image_from_bytes(darknet_image, image_resized.tobytes())
-    detections = darknet.detect_image(network, class_names, darknet_image, thresh=thresh)
+    # Measure detection time.
+    times = []
+    for i in range(11):
+        t1 = time.time()
+        detections = darknet.detect_image(network, class_names, darknet_image, thresh=thresh)
+        t2 = time.time()
+        avg_time = int((t2 -t1)*1000)
+        # print('Time taken by {} : '.format(image_or_path) + 'Iter ' +str(i)+ ">> " + str(avg_time) + ' ms')
+        if i > 0 :
+            times.append(avg_time)
+    print(times)
     darknet.free_image(darknet_image)
 
     image = darknet.draw_boxes(detections, image, class_colors, height, width)
