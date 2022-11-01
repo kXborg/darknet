@@ -364,7 +364,7 @@ void train_detector(char *datacfg, char *cfgfile, char *weightfile, int *gpus, i
             iter_map = iteration;
             mean_average_precision = validate_detector_map(datacfg, cfgfile, weightfile, thresh, iou_thresh, 0, net.letter_box, &net_map);// &net_combined);
             printf("\n mean_average_precision (mAP@%0.2f) = %f \n", iou_thresh, mean_average_precision);
-            if (mean_average_precision > best_map) {
+            if (mean_average_precision >= best_map) {
                 best_map = mean_average_precision;
                 printf("New best mAP!\n");
                 char buff[256];
@@ -492,7 +492,7 @@ static void print_cocos(FILE *fp, char *image_path, detection *dets, int num_box
             if (dets[i].prob[j] > 0) {
                 char buff[1024];
                 sprintf(buff, "{\"image_id\":%d, \"category_id\":%d, \"bbox\":[%f, %f, %f, %f], \"score\":%f},\n", image_id, coco_ids[j], bx, by, bw, bh, dets[i].prob[j]);
-                fprintf(fp, buff);
+                fprintf(fp, "%s", buff);
                 //printf("%s", buff);
             }
         }
